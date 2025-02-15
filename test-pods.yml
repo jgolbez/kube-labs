@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: internet-test-pod-a
+  namespace: default
+spec:
+  containers:
+  - name: curl-container
+    image: curlimages/curl
+    command: ["sleep", "infinity"]
+  nodeSelector:
+    kubernetes.io/hostname: ip-10-100-147-123.us-east-2.compute.internal
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: internet-test-pod-b
+  namespace: default
+spec:
+  containers:
+  - name: curl-container
+    image: curlimages/curl
+    command: ["sleep", "infinity"]
+  nodeSelector:
+    kubernetes.io/hostname: ip-10-100-181-25.us-east-2.compute.internal

@@ -1,0 +1,40 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+ name: eksctl-1
+ region: us-east-2
+
+vpc:
+ cidr: 10.100.0.0/16
+ nat:
+   gateway: Single
+ clusterEndpoints:
+   publicAccess: true
+   privateAccess: true
+
+nodeGroups:
+ - name: ng-1
+   instanceType: t3.medium
+   desiredCapacity: 2
+   privateNetworking: true
+
+---
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+ name: eksctl-2
+ region: us-east-2
+
+vpc:
+ cidr: 10.200.0.0/16
+ nat:
+   gateway: Single
+ clusterEndpoints:
+   publicAccess: true 
+   privateAccess: true
+
+nodeGroups:
+ - name: ng-1
+   instanceType: t3.medium
+   desiredCapacity: 2
+   privateNetworking: true
