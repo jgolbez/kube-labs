@@ -23,9 +23,14 @@ tasks:
       mkdir -p terraform
       
     command: |
-      echo "Development environment ready!"
-      echo "Please configure AWS credentials using:"
-      echo "aws configure"
+      # Verify AWS credentials are properly set
+      if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+        echo "AWS credentials found in environment variables"
+        aws sts get-caller-identity
+      else
+        echo "Warning: AWS credentials not found in environment variables"
+        echo "Please set them in Gitpod variables at gitpod.io/variables"
+      fi
 
 vscode:
   extensions:
