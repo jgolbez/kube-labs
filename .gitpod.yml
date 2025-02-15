@@ -43,7 +43,5 @@ vscode:
     - hashicorp.terraform
     - amazonwebservices.aws-toolkit-vscode
     - ms-kubernetes-tools.vscode-kubernetes-tools
-
   settings:
-    vs-kubernetes:
-      kubectl-path: "/usr/local/bin/kubectl"
+    "vs-kubernetes.kubectl-path": "/usr/bin/kubectl"
