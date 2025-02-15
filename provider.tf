@@ -21,11 +21,12 @@ provider "aws" {
   # AWS_SECRET_ACCESS_KEY
   # AWS_DEFAULT_REGION
 }
-# This provider configuration will be used to configure the aws-auth ConfigMap
+# This is our default provider configuration, which will be used for any
+# kubernetes resources that don't explicitly specify a provider
 provider "kubernetes" {
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-
+  host                   = data.aws_eks_cluster.cluster.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
+  
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
@@ -33,7 +34,16 @@ provider "kubernetes" {
       "eks",
       "get-token",
       "--cluster-name",
-      module.eks.cluster_name
+      data.aws_eks_cluster.cluster.name
     ]
   }
+}
+
+# Add these data sources at the end of your provider.tf file
+data "aws_eks_cluster" "cluster" {
+  name = module.eks.cluster_name
+  
+  depends_on = [
+    module.eks
+  ]
 }
