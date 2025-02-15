@@ -82,6 +82,44 @@ module "eks" {
   }
 }
 
+# AWS Auth Configuration
+resource "kubernetes_config_map_v1" "aws_auth" {
+  metadata {
+    name      = "aws-auth"
+    namespace = "kube-system"
+  }
+
+  data = {
+    mapRoles = yamlencode([
+      {
+        rolearn  = module.eks.eks_managed_node_groups["default"].iam_role_arn
+        username = "system:node:{{EC2PrivateDNSName}}"
+        groups = [
+          "system:bootstrappers",
+          "system:nodes"
+        ]
+      }
+    ])
+    mapUsers = yamlencode([
+      {
+        userarn  = "arn:aws:iam::795297372191:user/eks-lab-user"
+        username = "eks-lab-user"
+        groups   = ["system:masters"]
+      }
+    ])
+  }
+
+  depends_on = [
+    module.eks
+  ]
+}
+
+# Additional output to help verify the aws-auth configuration
+output "aws_auth_config" {
+  description = "The aws-auth ConfigMap configuration"
+  value       = kubernetes_config_map_v1.aws_auth.data
+}
+
 # Optional: Load Balancer Controller IAM role
 module "lb_role" {
   source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
