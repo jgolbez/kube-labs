@@ -1,47 +1,33 @@
+image:
+  file: .gitpod.dockerfile
+
 tasks:
-  - name: Install Infrastructure Tools
-    init: |
+  - init: |
+      sudo apt-get update
+      sudo apt-get install -y apt-transport-https ca-certificates curl
+      
       # Install Terraform
       sudo wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg
       echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-      sudo apt update && sudo apt install terraform
-
+      sudo apt-get update && sudo apt-get install -y terraform
+      
       # Install AWS CLI
       curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
       unzip awscliv2.zip
       sudo ./aws/install
-
-      # Install kubectl and dependencies
-      sudo apt-get update
-      sudo apt-get install -y apt-transport-https ca-certificates curl
-      curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg
-      echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-      sudo apt-get update
-      sudo apt-get install -y kubectl
-
-      # Verify kubectl installation
-      kubectl version --client
-
-      # Clean up
       rm -rf aws awscliv2.zip
-
-      # Create terraform directory
-      mkdir -p terraform
       
+      # Install kubectl
+      curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      chmod +x kubectl
+      sudo mv kubectl /usr/local/bin/
+      
+      mkdir -p terraform
     command: |
-      # Verify AWS credentials are properly set
-      if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
-        echo "AWS credentials found in environment variables"
-        aws sts get-caller-identity
-      else
-        echo "Warning: AWS credentials not found in environment variables"
-        echo "Please set them in Gitpod variables at gitpod.io/variables"
-      fi
+      echo "Environment ready!"
 
 vscode:
   extensions:
     - hashicorp.terraform
     - amazonwebservices.aws-toolkit-vscode
     - ms-kubernetes-tools.vscode-kubernetes-tools
-  settings:
-    "vs-kubernetes.kubectl-path": "/usr/bin/kubectl"
