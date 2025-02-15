@@ -26,7 +26,12 @@ tasks:
     
     command: |
       echo "Infrastructure tools ready!"
-
+      
+  - name: Shell Setup
+    command: |
+      echo '. <(eksctl completion bash)' >> ~/.bashrc
+      source ~/.bashrc
+      
 vscode:
   extensions:
     - hashicorp.terraform
