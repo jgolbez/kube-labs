@@ -1,8 +1,8 @@
 # main.tf
 
-provider "aws" {
-  region = "us-east-2"  # Changed to us-east-2
-}
+#provider "aws" {
+#  region = "us-east-2"  # Changed to us-east-2
+#}
 
 # VPC 1
 module "vpc_1" {
