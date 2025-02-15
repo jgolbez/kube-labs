@@ -11,10 +11,16 @@ tasks:
       unzip awscliv2.zip
       sudo ./aws/install
 
-      # Install kubectl
-      curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-      chmod +x kubectl
-      sudo mv kubectl /usr/local/bin/
+      # Install kubectl and dependencies
+      sudo apt-get update
+      sudo apt-get install -y apt-transport-https ca-certificates curl
+      curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+      echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+      sudo apt-get update
+      sudo apt-get install -y kubectl
+
+      # Verify kubectl installation
+      kubectl version --client
 
       # Clean up
       rm -rf aws awscliv2.zip
@@ -37,3 +43,7 @@ vscode:
     - hashicorp.terraform
     - amazonwebservices.aws-toolkit-vscode
     - ms-kubernetes-tools.vscode-kubernetes-tools
+
+  settings:
+    vs-kubernetes:
+      kubectl-path: "/usr/local/bin/kubectl"
