@@ -26,6 +26,8 @@ If using another dev environment, look up how to set and save environment variab
 
 ## EKS CTL Environment
 - Set your parameters for the clusters and nodes you want to deploy in eksctl-yaml.yml, for details on how to customize refer to documentation
+- The test-pods.yaml is what builds test containers inside these nodes, refer to the main eksctl-yaml.yml for details on where the pods should be deployed
+
 
 ## Terraform Environment
 - The EKS modules are a lot and so is setting up the IAM for them. I've included the IAM Policy as a seperate file under iam-policy-exmaple, it should give all permissions needed to build an EKS cluster, deploy pods and run kubectl commands
