@@ -45,34 +45,44 @@ module "vpc_2" {
 
 # EKS Cluster
 module "eks" {
-  source = "terraform-aws-modules/eks/aws"
+  source          = "terraform-aws-modules/eks/aws"
+  version         = "19.21.0"
   
   cluster_name    = "my-eks-cluster"
   cluster_version = "1.27"
   
-  vpc_id     = module.vpc_1.vpc_id
-  subnet_ids = module.vpc_1.private_subnets
+  vpc_id          = module.vpc_1.vpc_id
+  subnet_ids      = module.vpc_1.private_subnets
   
   cluster_endpoint_public_access = true
   
   eks_managed_node_groups = {
     default = {
-      min_size     = 1
-      max_size     = 3
-      desired_size = 2
-
-      instance_types = ["t3.medium"]
-      capacity_type  = "ON_DEMAND"
+      min_size        = 1
+      max_size        = 3
+      desired_size    = 2
+      instance_types  = ["t3.medium"]
+      capacity_type   = "ON_DEMAND"
     }
   }
 
   enable_irsa = true
+  
+  manage_aws_auth_configmap = true
+  aws_auth_users = [
+    {
+      userarn  = data.aws_caller_identity.current.arn
+      username = "admin"
+      groups   = ["system:masters"]
+    }
+  ]
   
   tags = {
     Environment = "dev"
   }
 }
 
+data "aws_caller_identity" "current" {}
 # Load Balancer Controller IAM role
 module "lb_role" {
   source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
@@ -85,6 +95,46 @@ module "lb_role" {
       provider_arn               = module.eks.oidc_provider_arn
       namespace_service_accounts = ["kube-system:aws-load-balancer-controller"]
     }
+  }
+}
+
+# AWS Auth ConfigMap
+resource "kubernetes_config_map" "aws_auth" {
+  depends_on = [module.eks.cluster_id]
+
+  metadata {
+    name      = "aws-auth"
+    namespace = "kube-system"
+  }
+
+  data = {
+    mapRoles = yamlencode([
+      {
+        rolearn  = module.eks.cluster_iam_role_arn
+        username = "system:node:{{EC2PrivateDNSName}}"
+        groups   = ["system:bootstrappers", "system:nodes"]
+      }
+    ])
+    mapUsers = yamlencode([
+      {
+        userarn  = data.aws_caller_identity.current.arn
+        username = "admin"
+        groups   = ["system:masters"]
+      }
+    ])
+  }
+}
+
+
+# Kubernetes provider
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+  
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+    command     = "aws"
   }
 }
 
