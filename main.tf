@@ -1,28 +1,20 @@
-# main.tf
-
-#provider "aws" {
-#  region = "us-east-2"  # Changed to us-east-2
-#}
-
 # VPC 1
 module "vpc_1" {
   source = "terraform-aws-modules/vpc/aws"
   
   name = "eks-vpc-1"
-  cidr = "10.100.0.0/16"  # Updated CIDR
+  cidr = "10.100.0.0/16"
   
-  azs             = ["us-east-2a", "us-east-2b"]  # Updated AZs
-  private_subnets = ["10.100.1.0/24", "10.100.2.0/24"]  # Updated subnets
-  public_subnets  = ["10.100.101.0/24", "10.100.102.0/24"]  # Updated subnets
+  azs             = ["us-east-2a", "us-east-2b"]
+  private_subnets = ["10.100.1.0/24", "10.100.2.0/24"]
+  public_subnets  = ["10.100.101.0/24", "10.100.102.0/24"]
   
   enable_nat_gateway = true
   single_nat_gateway = true
   
-  # Enable DNS hostnames and support
   enable_dns_hostnames = true
   enable_dns_support   = true
 
-  # Tags required for EKS
   public_subnet_tags = {
     "kubernetes.io/cluster/my-eks-cluster" = "shared"
     "kubernetes.io/role/elb"               = "1"
@@ -38,11 +30,11 @@ module "vpc_2" {
   source = "terraform-aws-modules/vpc/aws"
   
   name = "eks-vpc-2"
-  cidr = "10.200.0.0/16"  # Updated CIDR
+  cidr = "10.200.0.0/16"
   
-  azs             = ["us-east-2a", "us-east-2b"]  # Updated AZs
-  private_subnets = ["10.200.1.0/24", "10.200.2.0/24"]  # Updated subnets
-  public_subnets  = ["10.200.101.0/24", "10.200.102.0/24"]  # Updated subnets
+  azs             = ["us-east-2a", "us-east-2b"]
+  private_subnets = ["10.200.1.0/24", "10.200.2.0/24"]
+  public_subnets  = ["10.200.101.0/24", "10.200.102.0/24"]
   
   enable_nat_gateway = true
   single_nat_gateway = true
@@ -74,7 +66,6 @@ module "eks" {
     }
   }
 
-  # Enable OIDC provider for service accounts
   enable_irsa = true
   
   tags = {
@@ -82,45 +73,7 @@ module "eks" {
   }
 }
 
-# AWS Auth Configuration
-resource "kubernetes_config_map_v1" "aws_auth" {
-  metadata {
-    name      = "aws-auth"
-    namespace = "kube-system"
-  }
-
-  data = {
-    mapRoles = yamlencode([
-      {
-        rolearn  = module.eks.eks_managed_node_groups["default"].iam_role_arn
-        username = "system:node:{{EC2PrivateDNSName}}"
-        groups = [
-          "system:bootstrappers",
-          "system:nodes"
-        ]
-      }
-    ])
-    mapUsers = yamlencode([
-      {
-        userarn  = "arn:aws:iam::795297372191:user/eks-lab-user"
-        username = "eks-lab-user"
-        groups   = ["system:masters"]
-      }
-    ])
-  }
-
-  depends_on = [
-    module.eks
-  ]
-}
-
-# Additional output to help verify the aws-auth configuration
-output "aws_auth_config" {
-  description = "The aws-auth ConfigMap configuration"
-  value       = kubernetes_config_map_v1.aws_auth.data
-}
-
-# Optional: Load Balancer Controller IAM role
+# Load Balancer Controller IAM role
 module "lb_role" {
   source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
 
@@ -144,10 +97,15 @@ output "cluster_name" {
   value = module.eks.cluster_name
 }
 
+output "cluster_certificate_authority_data" {
+  value = module.eks.cluster_certificate_authority_data
+}
+
 output "vpc_1_public_subnets" {
   value = module.vpc_1.public_subnets
 }
 
 output "configure_kubectl" {
-  value = "Run: aws eks update-kubeconfig --region us-east-2 --name ${module.eks.cluster_name}"
+  description = "Configure kubectl: Command to configure kubectl"
+  value       = "aws eks update-kubeconfig --region us-east-2 --name ${module.eks.cluster_name}"
 }
