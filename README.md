@@ -37,5 +37,9 @@ If using another dev environment, look up how to set and save environment variab
 ## Terraform Environment
 - The EKS modules are a lot and so is setting up the IAM for them. I've included the IAM Policy as a seperate file under iam-policy, it should give all permissions needed to build an EKS cluster, deploy pods and run kubectl commands
 
+After the cluster is built, the outputs will include the command to run to register the created kubernetes cluster locally using AWS CLI:
+
+For example, if you name your cluster my-eks-cluster and use us-east-2 region:
+aws eks update-kubeconfig --region us-east-2 --name my-eks-cluster
 
 
