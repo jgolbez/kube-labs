@@ -1,0 +1,78 @@
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Sid": "VisualEditor0",
+			"Effect": "Allow",
+			"Action": [
+				"kms:EnableKey",
+				"kms:List*",
+				"kms:UntagResource",
+				"kms:PutKeyPolicy",
+				"iam:CreateRole",
+				"iam:AttachRolePolicy",
+				"iam:PutRolePolicy",
+				"autoscaling:*",
+				"logs:DeleteLogStream",
+				"logs:CreateLogStream",
+				"kms:TagResource",
+				"logs:TagLogGroup",
+				"iam:DeleteRolePolicy",
+				"kms:ScheduleKeyDeletion",
+				"logs:DeleteRetentionPolicy",
+				"kms:CreateKey",
+				"iam:GetRole",
+				"logs:DescribeLogGroups",
+				"logs:DeleteLogGroup",
+				"iam:DeleteRole",
+				"cloudformation:*",
+				"kms:Describe*",
+				"elasticloadbalancing:*",
+				"logs:TagResource",
+				"kms:DisableKey",
+				"logs:CreateLogGroup",
+				"logs:PutLogEvents",
+				"logs:ListTagsForResource",
+				"kms:UpdateAlias",
+				"iam:*",
+				"sts:AssumeRole",
+				"iam:CreateServiceLinkedRole",
+				"kms:GenerateDataKey",
+				"kms:CreateAlias",
+				"ec2:*",
+				"sts:GetCallerIdentity",
+				"eks:*",
+				"logs:PutRetentionPolicy",
+				"kms:DeleteAlias"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "VisualEditor1",
+			"Effect": "Allow",
+			"Action": [
+				"s3:PutObject",
+				"s3:GetObject",
+				"dynamodb:PutItem",
+				"dynamodb:DeleteItem",
+				"dynamodb:GetItem",
+				"s3:ListBucket",
+				"s3:DeleteObject"
+			],
+			"Resource": [
+				"arn:aws:s3:::terraform-state-*/*",
+				"arn:aws:s3:::terraform-state-*",
+				"arn:aws:dynamodb:*:*:table/terraform-lock"
+			]
+		},
+		{
+			"Sid": "VisualEditor2",
+			"Effect": "Allow",
+			"Action": [
+				"ssm:GetParameters",
+				"ssm:GetParameter"
+			],
+			"Resource": "arn:aws:ssm:*:*:parameter/aws/*"
+		}
+	]
+}

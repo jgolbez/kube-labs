@@ -2,6 +2,7 @@
 - Refer to Gitpod.yml to understand what packages and settings are pre-installed on this workspace and what you will nee dto do locally if running on another environment
 - You can use Terraform or EKSCTL to deploy the EKS resources, EKSCTL uses CloudFormation and Terraform is, well, Terraform. 
 - In both cases you need to supply local environment variables (DO NOT commit secrets to Github!)
+- Make sure if you use a repo that you have a .gitignore file to keep from uploading secrets and tfstate (see attached to this repo for example)
 
 Generally these steps are required to build an managed Kubernetes Cluster for a lab:
 1. Create a lab user (or reuse a lab user already created)
@@ -18,9 +19,13 @@ If using another dev environment, look up how to set and save environment variab
 
 ## Documentation
 [GitPod](https://gitpod.io)
+
 [EKSCTL](https://eksctl.io)
+
 [Terraform](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eks_cluster)
+
 [AWS - Create a Lab User](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)
+
 [AWS - Attach a Policy Directly to the User](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_change-permissions.html)
 
 
@@ -30,8 +35,7 @@ If using another dev environment, look up how to set and save environment variab
 
 
 ## Terraform Environment
-- The EKS modules are a lot and so is setting up the IAM for them. I've included the IAM Policy as a seperate file under iam-policy-exmaple, it should give all permissions needed to build an EKS cluster, deploy pods and run kubectl commands
+- The EKS modules are a lot and so is setting up the IAM for them. I've included the IAM Policy as a seperate file under iam-policy, it should give all permissions needed to build an EKS cluster, deploy pods and run kubectl commands
 
 
-### 
 
