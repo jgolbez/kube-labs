@@ -120,6 +120,7 @@ resource "aviatrix_spoke_transit_attachment" "vpc2_attachment" {
 # EKS Cluster in VPC 1
 module "eks_vpc1" {
   source = "terraform-aws-modules/eks/aws"
+  version = "19.21.0"  # Adding explicit version for stability
   
   cluster_name    = "eks-cluster-vpc1"
   cluster_version = "1.27"
@@ -134,7 +135,6 @@ module "eks_vpc1" {
       min_size     = 1
       max_size     = 3
       desired_size = 2
-
       instance_types = ["t3.medium"]
       capacity_type  = "ON_DEMAND"
     }
@@ -142,16 +142,27 @@ module "eks_vpc1" {
 
   enable_irsa = true
   
+  # Auth configuration
+  manage_aws_auth_configmap = true
+  aws_auth_roles = []
+  aws_auth_users = [
+    {
+      userarn  = data.aws_caller_identity.current.arn
+      username = "admin"
+      groups   = ["system:masters"]
+    }
+  ]
+  
   tags = {
     Environment = "dev"
   }
 }
-
 # EKS Cluster in VPC 2
 module "eks_vpc2" {
   source = "terraform-aws-modules/eks/aws"
+  version = "19.21.0"  # Adding explicit version for stability
   
-  cluster_name    = "eks-cluster-vpc2"
+  cluster_name    = "eks-cluster-vpc1"
   cluster_version = "1.27"
   
   vpc_id     = module.vpc_2.vpc_id
@@ -164,13 +175,23 @@ module "eks_vpc2" {
       min_size     = 1
       max_size     = 3
       desired_size = 2
-
       instance_types = ["t3.medium"]
       capacity_type  = "ON_DEMAND"
     }
   }
 
   enable_irsa = true
+  
+  # Auth configuration
+  manage_aws_auth_configmap = true
+  aws_auth_roles = []
+  aws_auth_users = [
+    {
+      userarn  = data.aws_caller_identity.current.arn
+      username = "admin"
+      groups   = ["system:masters"]
+    }
+  ]
   
   tags = {
     Environment = "dev"
@@ -196,66 +217,66 @@ resource "time_sleep" "wait_for_vpc2" {
 data "aws_caller_identity" "current" {}
 
 # AWS Load Balancer Controller service account for VPC 1
-resource "kubernetes_config_map" "aws_auth_vpc1" {
-  provider = kubernetes.vpc1  
-  depends_on = [time_sleep.wait_for_vpc1]
+#resource "kubernetes_config_map" "aws_auth_vpc1" {
+#  provider = kubernetes.vpc1  
+#  depends_on = [time_sleep.wait_for_vpc1]
 
-  metadata {
-    name      = "aws-auth"
-    namespace = "kube-system"
-  }
+#  metadata {
+#    name      = "aws-auth"
+#    namespace = "kube-system"
+#  }
 
-  data = {
-    mapRoles = yamlencode([
-      {
-        rolearn  = module.eks_vpc1.cluster_iam_role_arn
-        username = "system:node:{{EC2PrivateDNSName}}"
-        groups = [
-          "system:bootstrappers",
-          "system:nodes"
-        ]
-      }
-    ])
-    mapUsers = yamlencode([
-      {
-        userarn  = data.aws_caller_identity.current.arn
-        username = "admin"
-        groups   = ["system:masters"]
-      }
-    ])
-  }
-}
+#  data = {
+#    mapRoles = yamlencode([
+#      {
+#        rolearn  = module.eks_vpc1.cluster_iam_role_arn
+#        username = "system:node:{{EC2PrivateDNSName}}"
+#        groups = [
+#          "system:bootstrappers",
+#          "system:nodes"
+#        ]
+#      }
+#    ])
+#   mapUsers = yamlencode([
+#      {
+#        userarn  = data.aws_caller_identity.current.arn
+#        username = "admin"
+#        groups   = ["system:masters"]
+#      }
+#    ])
+#  }
+#}
 
 # AWS Load Balancer Controller service account for VPC 2
-resource "kubernetes_config_map" "aws_auth_vpc2" {
-  provider = kubernetes.vpc2
-  depends_on = [time_sleep.wait_for_vpc2]
+#resource "kubernetes_config_map" "aws_auth_vpc2" {
+#  provider = kubernetes.vpc2
+#  depends_on = [time_sleep.wait_for_vpc2]
 
-  metadata {
-    name      = "aws-auth"
-    namespace = "kube-system"
-  }
+#  metadata {
+#    name      = "aws-auth"
+#    namespace = "kube-system"
+#  }
 
-  data = {
-    mapRoles = yamlencode([
-      {
-        rolearn  = module.eks_vpc2.cluster_iam_role_arn
-        username = "system:node:{{EC2PrivateDNSName}}"
-        groups = [
-          "system:bootstrappers",
-          "system:nodes"
-        ]
-      }
-    ])
-    mapUsers = yamlencode([
-      {
-        userarn  = data.aws_caller_identity.current.arn
-        username = "admin"
-        groups   = ["system:masters"]
-      }
-    ])
-  }
-}
+#  data = {
+#    mapRoles = yamlencode([
+#      {
+#        rolearn  = module.eks_vpc2.cluster_iam_role_arn
+#        username = "system:node:{{EC2PrivateDNSName}}"
+#        groups = [
+#          "system:bootstrappers",
+#          "system:nodes"
+#        ]
+#      }
+#    ])
+#    mapUsers = yamlencode([
+#      {
+#        userarn  = data.aws_caller_identity.current.arn
+#        username = "admin"
+#        groups   = ["system:masters"]
+#      }
+#    ])
+#  }
+#}
 
 # Load Balancer Controller IAM role for VPC1
 module "lb_role_vpc1" {
@@ -340,7 +361,7 @@ resource "helm_release" "aws_load_balancer_controller_vpc1" {
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
-  depends_on = [module.eks_vpc1, kubernetes_config_map.aws_auth_vpc1]
+  depends_on = [module.eks_vpc1]
 
   set {
     name  = "clusterName"
@@ -365,7 +386,7 @@ resource "helm_release" "aws_load_balancer_controller_vpc2" {
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
-  depends_on = [module.eks_vpc2, kubernetes_config_map.aws_auth_vpc2]
+  depends_on = [module.eks_vpc2]
 
   set {
     name  = "clusterName"
