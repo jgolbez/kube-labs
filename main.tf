@@ -179,6 +179,7 @@ module "eks_vpc2" {
 
 # AWS Load Balancer Controller service account for VPC 1
 resource "kubernetes_config_map" "aws_auth_vpc1" {
+  provider = kubernetes.vpc1  
   depends_on = [module.eks_vpc1]
 
   metadata {
@@ -198,12 +199,11 @@ resource "kubernetes_config_map" "aws_auth_vpc1" {
       }
     ])
   }
-
-  provider = kubernetes.vpc1
 }
 
 # AWS Load Balancer Controller service account for VPC 2
 resource "kubernetes_config_map" "aws_auth_vpc2" {
+  provider = kubernetes.vpc2
   depends_on = [module.eks_vpc2]
 
   metadata {
@@ -223,8 +223,6 @@ resource "kubernetes_config_map" "aws_auth_vpc2" {
       }
     ])
   }
-
-  provider = kubernetes.vpc2
 }
 
 # Load Balancer Controller IAM role for VPC1
