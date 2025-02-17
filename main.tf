@@ -208,7 +208,7 @@ resource "kubernetes_config_map" "aws_auth_vpc1" {
   data = {
     mapRoles = yamlencode([
       {
-        rolearn  = module.eks_vpc1.eks_managed_node_groups["default"].iam_role_arn
+        rolearn  = module.eks_vpc1.cluster_iam_role_arn
         username = "system:node:{{EC2PrivateDNSName}}"
         groups = [
           "system:bootstrappers",
@@ -239,7 +239,7 @@ resource "kubernetes_config_map" "aws_auth_vpc2" {
   data = {
     mapRoles = yamlencode([
       {
-        rolearn  = module.eks_vpc2.eks_managed_node_groups["default"].iam_role_arn
+        rolearn  = module.eks_vpc2.cluster_iam_role_arn
         username = "system:node:{{EC2PrivateDNSName}}"
         groups = [
           "system:bootstrappers",
