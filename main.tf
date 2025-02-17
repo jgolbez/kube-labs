@@ -177,14 +177,29 @@ module "eks_vpc2" {
   }
 }
 
+# Time delay for cluster and node readiness
+resource "time_sleep" "wait_for_vpc1" {
+  depends_on = [
+    module.eks_vpc1
+  ]
+  create_duration = "120s"
+}
+
+resource "time_sleep" "wait_for_vpc2" {
+  depends_on = [
+    module.eks_vpc2
+  ]
+  create_duration = "120s"
+}
+
+# Get AWS caller identity
+data "aws_caller_identity" "current" {}
+
 # AWS Load Balancer Controller service account for VPC 1
 resource "kubernetes_config_map" "aws_auth_vpc1" {
   provider = kubernetes.vpc1  
-  depends_on = [
-      module.eks_vpc1,
-      module.eks_vpc1.eks_managed_node_groups,
-      module.eks_vpc1.cluster_id
-  ]
+  depends_on = [time_sleep.wait_for_vpc1]
+
   metadata {
     name      = "aws-auth"
     namespace = "kube-system"
@@ -201,17 +216,21 @@ resource "kubernetes_config_map" "aws_auth_vpc1" {
         ]
       }
     ])
+    mapUsers = yamlencode([
+      {
+        userarn  = data.aws_caller_identity.current.arn
+        username = "admin"
+        groups   = ["system:masters"]
+      }
+    ])
   }
 }
 
 # AWS Load Balancer Controller service account for VPC 2
 resource "kubernetes_config_map" "aws_auth_vpc2" {
   provider = kubernetes.vpc2
-  depends_on = [
-      module.eks_vpc2,
-      module.eks_vpc2.eks_managed_node_groups,
-      module.eks_vpc2.cluster_id
-  ]
+  depends_on = [time_sleep.wait_for_vpc2]
+
   metadata {
     name      = "aws-auth"
     namespace = "kube-system"
@@ -226,6 +245,13 @@ resource "kubernetes_config_map" "aws_auth_vpc2" {
           "system:bootstrappers",
           "system:nodes"
         ]
+      }
+    ])
+    mapUsers = yamlencode([
+      {
+        userarn  = data.aws_caller_identity.current.arn
+        username = "admin"
+        groups   = ["system:masters"]
       }
     ])
   }
