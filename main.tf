@@ -180,8 +180,11 @@ module "eks_vpc2" {
 # AWS Load Balancer Controller service account for VPC 1
 resource "kubernetes_config_map" "aws_auth_vpc1" {
   provider = kubernetes.vpc1  
-  depends_on = [module.eks_vpc1]
-
+  depends_on = [
+      module.eks_vpc1,
+      module.eks_vpc1.eks_managed_node_groups,
+      module.eks_vpc1.cluster_id
+  ]
   metadata {
     name      = "aws-auth"
     namespace = "kube-system"
@@ -204,8 +207,11 @@ resource "kubernetes_config_map" "aws_auth_vpc1" {
 # AWS Load Balancer Controller service account for VPC 2
 resource "kubernetes_config_map" "aws_auth_vpc2" {
   provider = kubernetes.vpc2
-  depends_on = [module.eks_vpc2]
-
+  depends_on = [
+      module.eks_vpc2,
+      module.eks_vpc2.eks_managed_node_groups,
+      module.eks_vpc2.cluster_id
+  ]
   metadata {
     name      = "aws-auth"
     namespace = "kube-system"
