@@ -25,7 +25,7 @@ terraform {
       version = "~> 3.0"
     }
   }
-  
+
   required_version = ">= 1.0"
 }
 
@@ -35,8 +35,8 @@ provider "aws" {
 
 provider "aviatrix" {
   controller_ip = var.controller_ip
-  username     = var.username
-  password     = var.password
+  username      = var.username
+  password      = var.password
 }
 
 provider "kubernetes" {
@@ -58,5 +58,32 @@ provider "kubernetes" {
     api_version = "client.authentication.k8s.io/v1beta1"
     args        = ["eks", "get-token", "--cluster-name", module.eks_vpc2.cluster_name]
     command     = "aws"
+  }
+}
+# Helm provider configuration for VPC1
+provider "helm" {
+  alias = "vpc1"
+  kubernetes {
+    host                   = module.eks_vpc1.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks_vpc1.cluster_certificate_authority_data)
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", module.eks_vpc1.cluster_name]
+      command     = "aws"
+    }
+  }
+}
+
+# Helm provider configuration for VPC2
+provider "helm" {
+  alias = "vpc2"
+  kubernetes {
+    host                   = module.eks_vpc2.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks_vpc2.cluster_certificate_authority_data)
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", module.eks_vpc2.cluster_name]
+      command     = "aws"
+    }
   }
 }

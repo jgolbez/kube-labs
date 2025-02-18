@@ -1,0 +1,4 @@
+controller_ip    = "CONTROLLER_IP"
+username         = "USERNAME"
+password         = "PASSWORD"
+aws_account_name = "CONTROLLER_AWS_ACCOUNT"
