@@ -1,0 +1,97 @@
+image: gitpod/workspace-full
+
+tasks:
+  - name: Setup Infrastructure Tools
+    init: |
+      # Install Terraform
+      wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+      sudo apt-get update && sudo apt-get install -y terraform
+      
+      # Install AWS CLI
+      curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+      unzip awscliv2.zip
+      sudo ./aws/install
+      rm -rf aws awscliv2.zip
+      
+      # Install kubectl
+      curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      chmod +x kubectl
+      sudo mv kubectl /usr/local/bin/
+      
+      # Install EKSCTL
+      curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+      sudo mv /tmp/eksctl /usr/local/bin
+      
+      # Install Terraform tools for better IDE support
+      sudo apt-get install -y graphviz # for terraform graph visualization
+      
+      # Install Terraform LSP for better IDE integration
+      GO111MODULE=on go get github.com/hashicorp/terraform-ls
+      
+      # Save installation state to persist through timeout
+      mkdir -p ~/.gitpod-persist
+      echo "TOOLS_INSTALLED=true" > ~/.gitpod-persist/state
+    
+    command: |
+      # Check if we need to re-install after timeout
+      if [ ! -f ~/.gitpod-persist/state ] || [ ! -f /usr/local/bin/kubectl ]; then
+        echo "Workspace timed out, reinstalling tools..."
+        
+        # Reinstall essential tools that might be missing after timeout
+        if [ ! -f /usr/local/bin/terraform ]; then
+          wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt-get update && sudo apt-get install -y terraform
+        fi
+        
+        if [ ! -f /usr/local/bin/kubectl ]; then
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+        fi
+        
+        if [ ! -f /usr/local/bin/eksctl ]; then
+          curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+          sudo mv /tmp/eksctl /usr/local/bin
+        fi
+        
+        # Recreate persistence marker
+        mkdir -p ~/.gitpod-persist
+        echo "TOOLS_INSTALLED=true" > ~/.gitpod-persist/state
+      fi
+      
+      # Verify installations
+      echo "Infrastructure tools ready!"
+      terraform --version
+      aws --version
+      kubectl version --client
+      eksctl version
+      
+  - name: Shell Setup
+    command: |
+      echo '. <(eksctl completion bash)' >> ~/.bashrc
+      echo 'alias tf="terraform"' >> ~/.bashrc
+      echo 'alias tfp="terraform plan"' >> ~/.bashrc
+      echo 'alias tfa="terraform apply"' >> ~/.bashrc
+      echo 'alias tfd="terraform destroy"' >> ~/.bashrc
+      source ~/.bashrc
+
+# Enhanced IDE support
+vscode:
+  extensions:
+    - hashicorp.terraform                # Terraform support
+    - amazonwebservices.aws-toolkit-vscode
+    - ms-kubernetes-tools.vscode-kubernetes-tools
+    - hashicorp.hcl                      # HCL language support
+    - 4ops.terraform                     # Additional Terraform support
+    - redhat.vscode-yaml                 # YAML support for Kubernetes
+    - ms-azuretools.vscode-docker        # Docker support
+
+# Persist specific paths to maintain tool installations
+workspaceLocation: /workspace
+
+# Remove port configuration unless specifically needed
+# ports:
+#   - port: 8001
+#     onOpen: ignore
