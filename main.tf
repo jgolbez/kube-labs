@@ -1,4 +1,3 @@
-
 module "aws_transit" {
   source  = "terraform-aviatrix-modules/mc-transit/aviatrix"
   version = "2.6.0"
@@ -35,10 +34,175 @@ module "spoke_aws_2" {
   ha_gw      = false
 }
 
+# Security groups for EKS endpoints
+resource "aws_security_group" "eks_endpoint_sg1" {
+  name        = "eks-endpoint-sg1"
+  description = "Security group for EKS VPC1 endpoints"
+  vpc_id      = module.spoke_aws_1.vpc.vpc_id
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["10.101.0.0/16"]
+  }
+  
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group" "eks_endpoint_sg2" {
+  name        = "eks-endpoint-sg2"
+  description = "Security group for EKS VPC2 endpoints"
+  vpc_id      = module.spoke_aws_2.vpc.vpc_id
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["10.102.0.0/16"]
+  }
+  
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# EKS VPC Endpoints
+resource "aws_vpc_endpoint" "eks1" {
+  vpc_id            = module.spoke_aws_1.vpc.vpc_id
+  service_name      = "com.amazonaws.us-east-2.eks"
+  vpc_endpoint_type = "Interface"
+  subnet_ids = [
+    module.spoke_aws_1.vpc.private_subnets[0].subnet_id,
+    module.spoke_aws_1.vpc.private_subnets[1].subnet_id
+  ]
+  security_group_ids = [aws_security_group.eks_endpoint_sg1.id]
+  private_dns_enabled = true
+}
+
+resource "aws_vpc_endpoint" "eks2" {
+  vpc_id            = module.spoke_aws_2.vpc.vpc_id
+  service_name      = "com.amazonaws.us-east-2.eks"
+  vpc_endpoint_type = "Interface"
+  subnet_ids = [
+    module.spoke_aws_2.vpc.private_subnets[0].subnet_id,
+    module.spoke_aws_2.vpc.private_subnets[1].subnet_id
+  ]
+  security_group_ids = [aws_security_group.eks_endpoint_sg2.id]
+  private_dns_enabled = true
+}
+
+# EC2 VPC Endpoints - required for node registration
+resource "aws_vpc_endpoint" "ec2_vpc1" {
+  vpc_id            = module.spoke_aws_1.vpc.vpc_id
+  service_name      = "com.amazonaws.us-east-2.ec2"
+  vpc_endpoint_type = "Interface"
+  subnet_ids = [
+    module.spoke_aws_1.vpc.private_subnets[0].subnet_id,
+    module.spoke_aws_1.vpc.private_subnets[1].subnet_id
+  ]
+  security_group_ids = [aws_security_group.eks_endpoint_sg1.id]
+  private_dns_enabled = true
+}
+
+resource "aws_vpc_endpoint" "ec2_vpc2" {
+  vpc_id            = module.spoke_aws_2.vpc.vpc_id
+  service_name      = "com.amazonaws.us-east-2.ec2"
+  vpc_endpoint_type = "Interface"
+  subnet_ids = [
+    module.spoke_aws_2.vpc.private_subnets[0].subnet_id,
+    module.spoke_aws_2.vpc.private_subnets[1].subnet_id
+  ]
+  security_group_ids = [aws_security_group.eks_endpoint_sg2.id]
+  private_dns_enabled = true
+}
+
+# ECR VPC Endpoints - required for pulling container images
+resource "aws_vpc_endpoint" "ecr_api_vpc1" {
+  vpc_id            = module.spoke_aws_1.vpc.vpc_id
+  service_name      = "com.amazonaws.us-east-2.ecr.api"
+  vpc_endpoint_type = "Interface"
+  subnet_ids = [
+    module.spoke_aws_1.vpc.private_subnets[0].subnet_id,
+    module.spoke_aws_1.vpc.private_subnets[1].subnet_id
+  ]
+  security_group_ids = [aws_security_group.eks_endpoint_sg1.id]
+  private_dns_enabled = true
+}
+
+resource "aws_vpc_endpoint" "ecr_dkr_vpc1" {
+  vpc_id            = module.spoke_aws_1.vpc.vpc_id
+  service_name      = "com.amazonaws.us-east-2.ecr.dkr"
+  vpc_endpoint_type = "Interface"
+  subnet_ids = [
+    module.spoke_aws_1.vpc.private_subnets[0].subnet_id,
+    module.spoke_aws_1.vpc.private_subnets[1].subnet_id
+  ]
+  security_group_ids = [aws_security_group.eks_endpoint_sg1.id]
+  private_dns_enabled = true
+}
+
+resource "aws_vpc_endpoint" "ecr_api_vpc2" {
+  vpc_id            = module.spoke_aws_2.vpc.vpc_id
+  service_name      = "com.amazonaws.us-east-2.ecr.api"
+  vpc_endpoint_type = "Interface"
+  subnet_ids = [
+    module.spoke_aws_2.vpc.private_subnets[0].subnet_id,
+    module.spoke_aws_2.vpc.private_subnets[1].subnet_id
+  ]
+  security_group_ids = [aws_security_group.eks_endpoint_sg2.id]
+  private_dns_enabled = true
+}
+
+resource "aws_vpc_endpoint" "ecr_dkr_vpc2" {
+  vpc_id            = module.spoke_aws_2.vpc.vpc_id
+  service_name      = "com.amazonaws.us-east-2.ecr.dkr"
+  vpc_endpoint_type = "Interface"
+  subnet_ids = [
+    module.spoke_aws_2.vpc.private_subnets[0].subnet_id,
+    module.spoke_aws_2.vpc.private_subnets[1].subnet_id
+  ]
+  security_group_ids = [aws_security_group.eks_endpoint_sg2.id]
+  private_dns_enabled = true
+}
+
+# S3 Gateway endpoint for ECR storage
+# Get route tables for VPC1
+data "aws_route_tables" "vpc1_private" {
+  vpc_id = module.spoke_aws_1.vpc.vpc_id
+}
+
+# Get route tables for VPC2
+data "aws_route_tables" "vpc2_private" {
+  vpc_id = module.spoke_aws_2.vpc.vpc_id
+}
+
+resource "aws_vpc_endpoint" "s3_vpc1" {
+  vpc_id            = module.spoke_aws_1.vpc.vpc_id
+  service_name      = "com.amazonaws.us-east-2.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = data.aws_route_tables.vpc1_private.ids
+}
+
+resource "aws_vpc_endpoint" "s3_vpc2" {
+  vpc_id            = module.spoke_aws_2.vpc.vpc_id
+  service_name      = "com.amazonaws.us-east-2.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = data.aws_route_tables.vpc2_private.ids
+}
+
 # EKS Cluster in VPC 1
 module "eks_vpc1" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "19.21.0" # Adding explicit version for stability
+  version = "19.21.0"
 
   cluster_name    = "eks-cluster-vpc1"
   cluster_version = "1.27"
@@ -49,7 +213,8 @@ module "eks_vpc1" {
     module.spoke_aws_1.vpc.private_subnets[1].subnet_id
   ]
 
-#  cluster_endpoint_public_access = true
+  cluster_endpoint_public_access  = false
+  cluster_endpoint_private_access = true
 
   eks_managed_node_groups = {
     default = {
@@ -58,33 +223,31 @@ module "eks_vpc1" {
       desired_size   = 2
       instance_types = ["t3.medium"]
       capacity_type  = "ON_DEMAND"
+      
+      # Fix for_each dependency issues
+      iam_role_name            = "eks-vpc1-node-group-role"
+      iam_role_use_name_prefix = false
+      iam_role_path            = "/"
+      iam_role_description     = "EKS managed node group IAM role"
+      iam_role_attach_cni_policy = true
     }
   }
-  #depends_on = [aws_vpc_endpoint.eks1]
-
-  #enable_irsa = true
-
-  # Auth configuration
-  # manage_aws_auth_configmap = true
-  # aws_auth_roles = []
-  # aws_auth_users = [
-  #   {
-  #     userarn  = data.aws_caller_identity.current.arn
-  #     username = "admin"
-  #     groups   = ["system:masters"]
-  #   }
-  # ]
-
-  # tags = {
-  #   Environment = "dev"
-  # }
+  
+  depends_on = [
+    aws_vpc_endpoint.eks1,
+    aws_vpc_endpoint.ec2_vpc1,
+    aws_vpc_endpoint.ecr_api_vpc1,
+    aws_vpc_endpoint.ecr_dkr_vpc1,
+    aws_vpc_endpoint.s3_vpc1
+  ]
 }
+
 # EKS Cluster in VPC 2
 module "eks_vpc2" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "19.21.0" # Adding explicit version for stability
+  version = "19.21.0"
 
-  cluster_name    = "eks-cluster-vpc1"
+  cluster_name    = "eks-cluster-vpc2"  # Changed from vpc1 to vpc2
   cluster_version = "1.27"
 
   vpc_id = module.spoke_aws_2.vpc.vpc_id
@@ -92,7 +255,9 @@ module "eks_vpc2" {
     module.spoke_aws_2.vpc.private_subnets[0].subnet_id,
     module.spoke_aws_2.vpc.private_subnets[1].subnet_id
   ]
-#  cluster_endpoint_public_access = false
+  
+  cluster_endpoint_public_access  = false
+  cluster_endpoint_private_access = true
 
   eks_managed_node_groups = {
     default = {
@@ -101,27 +266,24 @@ module "eks_vpc2" {
       desired_size   = 2
       instance_types = ["t3.medium"]
       capacity_type  = "ON_DEMAND"
+      
+      # Fix for_each dependency issues
+      iam_role_name            = "eks-vpc2-node-group-role"
+      iam_role_use_name_prefix = false
+      iam_role_path            = "/"
+      iam_role_description     = "EKS managed node group IAM role"
+      iam_role_attach_cni_policy = true
     }
   }
-  #depends_on = [aws_vpc_endpoint.eks2]
-
-  #  enable_irsa = true
-
-  # Auth configuration
-  #  manage_aws_auth_configmap = true
-  #  aws_auth_roles = []
-  #  aws_auth_users = [
-  #    {
-  #      userarn  = data.aws_caller_identity.current.arn
-  #      username = "admin"
-  #      groups   = ["system:masters"]
-  #    }
-  #  ]
-
-  ##  tags = {
-  #    Environment = "dev"
+  
+  depends_on = [
+    aws_vpc_endpoint.eks2,
+    aws_vpc_endpoint.ec2_vpc2,
+    aws_vpc_endpoint.ecr_api_vpc2,
+    aws_vpc_endpoint.ecr_dkr_vpc2,
+    aws_vpc_endpoint.s3_vpc2
+  ]
 }
-
 
 # Time delay for cluster and node readiness
 resource "time_sleep" "wait_for_vpc1" {
@@ -137,101 +299,6 @@ resource "time_sleep" "wait_for_vpc2" {
   ]
   create_duration = "120s"
 }
-
-# Get AWS caller identity
-# data "aws_caller_identity" "current" {}
-
-# AWS Load Balancer Controller service account for VPC 1
-#resource "kubernetes_config_map" "aws_auth_vpc1" {
-#  provider = kubernetes.vpc1  
-#  depends_on = [time_sleep.wait_for_vpc1]
-
-#  metadata {
-#    name      = "aws-auth"
-#    namespace = "kube-system"
-#  }
-
-#  data = {
-#    mapRoles = yamlencode([
-#      {
-#        rolearn  = module.eks_vpc1.cluster_iam_role_arn
-#        username = "system:node:{{EC2PrivateDNSName}}"
-#        groups = [
-#          "system:bootstrappers",
-#          "system:nodes"
-#        ]
-#      }
-#    ])
-#   mapUsers = yamlencode([
-#      {
-#        userarn  = data.aws_caller_identity.current.arn
-#        username = "admin"
-#        groups   = ["system:masters"]
-#      }
-#    ])
-#  }
-#}
-
-# AWS Load Balancer Controller service account for VPC 2
-#resource "kubernetes_config_map" "aws_auth_vpc2" {
-#  provider = kubernetes.vpc2
-#  depends_on = [time_sleep.wait_for_vpc2]
-
-#  metadata {
-#    name      = "aws-auth"
-#    namespace = "kube-system"
-#  }
-
-#  data = {
-#    mapRoles = yamlencode([
-#      {
-#        rolearn  = module.eks_vpc2.cluster_iam_role_arn
-#        username = "system:node:{{EC2PrivateDNSName}}"
-#        groups = [
-#          "system:bootstrappers",
-#          "system:nodes"
-#        ]
-#      }
-#    ])
-#    mapUsers = yamlencode([
-#      {
-#        userarn  = data.aws_caller_identity.current.arn
-#        username = "admin"
-#        groups   = ["system:masters"]
-#      }
-#    ])
-#  }
-#}
-
-##  Load Balancer Controller IAM role for VPC1
-# module "lb_role_vpc1" {
-#   source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-
-#   role_name                              = "eks-lb-controller-vpc1"
-#   attach_load_balancer_controller_policy = true
-
-#   oidc_providers = {
-#     main = {
-#       provider_arn               = module.eks_vpc1.oidc_provider_arn
-#       namespace_service_accounts = ["kube-system:aws-load-balancer-controller"]
-#     }
-#   }
-# }
-
-# # Load Balancer Controller IAM role for VPC2
-# module "lb_role_vpc2" {
-#   source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-
-#   role_name                              = "eks-lb-controller-vpc2"
-#   attach_load_balancer_controller_policy = true
-
-#   oidc_providers = {
-#     main = {
-#       provider_arn               = module.eks_vpc2.oidc_provider_arn
-#       namespace_service_accounts = ["kube-system:aws-load-balancer-controller"]
-#     }
-#   }
-# }
 
 # Variables for Aviatrix
 variable "controller_ip" {
@@ -250,82 +317,6 @@ variable "aws_account_name" {
   type        = string
   description = "Aviatrix account name for AWS"
 }
-
-
-# AWS Load Balancer Controller for VPC1
-# resource "helm_release" "aws_load_balancer_controller_vpc1" {
-#   provider   = helm.vpc1
-#   name       = "aws-load-balancer-controller"
-#   repository = "https://aws.github.io/eks-charts"
-#   chart      = "aws-load-balancer-controller"
-#   namespace  = "kube-system"
-#   depends_on = [module.eks_vpc1]
-
-#   set {
-#     name  = "clusterName"
-#     value = module.eks_vpc1.cluster_name
-#   }
-
-#   set {
-#     name  = "serviceAccount.create"
-#     value = "true"
-#   }
-
-#   set {
-#     name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-#     value = module.lb_role_vpc1.iam_role_arn
-#   }
-# }
-
-# # AWS Load Balancer Controller for VPC2
-# resource "helm_release" "aws_load_balancer_controller_vpc2" {
-#   provider   = helm.vpc2
-#   name       = "aws-load-balancer-controller"
-#   repository = "https://aws.github.io/eks-charts"
-#   chart      = "aws-load-balancer-controller"
-#   namespace  = "kube-system"
-#   depends_on = [module.eks_vpc2]
-
-#   set {
-#     name  = "clusterName"
-#     value = module.eks_vpc2.cluster_name
-#   }
-
-#   set {
-#     name  = "serviceAccount.create"
-#     value = "true"
-#   }
-
-#   set {
-#     name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-#     value = module.lb_role_vpc2.iam_role_arn
-#   }
-# }
-
-
-resource "aws_vpc_endpoint" "eks1" {
-  vpc_id            = module.spoke_aws_1.vpc.vpc_id
-  service_name      = "com.amazonaws.us-east-2.eks"
-  vpc_endpoint_type = "Interface"
-  subnet_ids = [
-    module.spoke_aws_1.vpc.private_subnets[0].subnet_id,
-    module.spoke_aws_1.vpc.private_subnets[1].subnet_id
-  ]
-  private_dns_enabled = true
-}
-
-resource "aws_vpc_endpoint" "eks2" {
-  vpc_id            = module.spoke_aws_2.vpc.vpc_id
-  service_name      = "com.amazonaws.us-east-2.eks"
-  vpc_endpoint_type = "Interface"
-  subnet_ids = [
-    module.spoke_aws_2.vpc.private_subnets[0].subnet_id,
-    module.spoke_aws_2.vpc.private_subnets[1].subnet_id
-  ]
-  private_dns_enabled = true
-}
-
-
 
 output "cluster_arn_vpc1" {
   description = "ARN of VPC1 EKS cluster"
