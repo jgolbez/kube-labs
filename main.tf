@@ -213,8 +213,7 @@ module "eks_vpc1" {
     module.spoke_aws_1.vpc.private_subnets[1].subnet_id
   ]
 
-  cluster_endpoint_public_access  = false
-  cluster_endpoint_private_access = true
+  cluster_endpoint_public_access  = true
 
   eks_managed_node_groups = {
     default = {
@@ -251,13 +250,13 @@ module "eks_vpc2" {
   cluster_version = "1.27"
 
   vpc_id = module.spoke_aws_2.vpc.vpc_id
+
   subnet_ids = [
     module.spoke_aws_2.vpc.private_subnets[0].subnet_id,
     module.spoke_aws_2.vpc.private_subnets[1].subnet_id
   ]
-  
-  cluster_endpoint_public_access  = false
-  cluster_endpoint_private_access = true
+
+  cluster_endpoint_public_access  = true
 
   eks_managed_node_groups = {
     default = {
